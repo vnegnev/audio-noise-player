@@ -1,0 +1,6 @@
+#+TITLE: Audio noise player
+
+Very simple pink-noise generator with hardly any features.
+Spectral shaping is applied using an FFT, and can be tuned arbitrarily.
+
+Dependencies: numpy, pyaudio, matplotlib
