@@ -4,37 +4,50 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyaudio as pa
 import sys
+import time
 
 samplerate = 44100
-seconds = 5
-loops = 10000
+seconds = 30
+frame_len = 100000
 volume = 2
+
+samples = samplerate * seconds + 1
 
 p = pa.PyAudio()
 
-stream = p.open(samplerate, 1, pa.paFloat32, output=True)
-
 if False:
-    t = np.linspace(0, seconds, samplerate * seconds + 1)
+    t = np.linspace(0, seconds, samples)
     y = volume * np.sin(2*np.pi*440*t)
 
-data_list = []
 
-for k in range(100):
-    y = volume * np.random.random(samplerate * seconds + 1)
-    y -= y.mean()
-    f_axis = np.linspace(1, 200, (samplerate * seconds)//2 + 1)
-    scaling = 1 / f_axis
+y = volume * np.random.random(samples)
+y -= y.mean()
+f_axis = np.linspace(1, 200, (samplerate * seconds)//2 + 1)
+scaling = 1 / f_axis
 
-    yf = np.fft.rfft(y)
-    yf_scaled = yf * scaling
-    y_spect = np.fft.irfft(yf_scaled)
+yf = np.fft.rfft(y)
+yf_scaled = yf * scaling
+y_spect = np.fft.irfft(yf_scaled)
 
-    # plt.plot(yf_scaled);plt.show()
+# plt.plot(yf_scaled);plt.show()
 
-    y_raw = y_spect.astype(np.float32)
+y_raw = y_spect.astype(np.float32)
 
-    data_list.append(y_raw)
+a = 0
 
-for k in data_list:
-    stream.write(k)
+def callback(in_data, frame_count, time_info, status):
+    global a
+    sdata = y_raw[a: a + frame_len*frame_count]
+    a = np.mod(a + frame_len, samples)
+    return sdata, pa.paContinue
+
+stream = p.open(samplerate, 1, pa.paFloat32, output=True, stream_callback=callback)
+
+stream.start_stream()
+
+while True:
+    time.sleep(0.1)
+
+stream.stop_stream()
+stream.close()
+pa.terminate()
